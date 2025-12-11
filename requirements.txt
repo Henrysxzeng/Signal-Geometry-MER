@@ -1,0 +1,9 @@
+pandas
+scikit-learn
+facenet-pytorch
+einops
+tqdm
+opencv-python-headless
+pytorch-metric-learning
+matplotlib
+numpy
