@@ -1,114 +1,114 @@
-# Signal-Geometry Aware Micro-Expression Recognition
+# Signal-Geometry Optimization for Micro-Expression Recognition
 
-This repository contains the official PyTorch implementation for the paper:  
-**"Signal-Geometry Aware Micro-Expression Recognition: A Dynamic Gradient Gain Approach"**.
+Research code accompanying **Signal-Geometry Optimization for Micro-Expression Recognition: A Dynamic Gradient Gain Perspective**, by Qi Zeng, Rujun Xu, and Cong Li, published in *IEEE Signal Processing Letters*, vol. 33, pp. 2066-2070, 2026.
 
-Our framework integrates a Hierarchical Transformer (HTNet) with a Proxy Anchor Loss to enhance robustness in low-SNR micro-expression recognition tasks.
+**Paper:** https://doi.org/10.1109/LSP.2026.3693220
 
-## 📋 Table of Contents
-- [Environment Setup](#-environment-setup)
-- [Data Preparation](#-data-preparation)
-- [Usage](#-usage)
-- [Files Description](#-files-description)
-- [Acknowledgement](#-acknowledgement)
+This project studies micro-expression recognition using a hierarchical Transformer backbone and hyperspherical proxy-based metric learning. It includes training, cross-entropy and angular-margin comparisons, and robustness/embedding visualizations.
 
-## 🛠️ Environment Setup
+## Repository Map
 
-The code is tested on **Linux** with **Python 3.9** and **PyTorch 2.x (CUDA 11.8)**.
+| File | Purpose |
+| --- | --- |
+| `main.py` | HTNet with Proxy Anchor loss |
+| `main_HTNet_Baseline.py` | Cross-entropy baseline |
+| `main_Arc+Cos.py` | ArcFace and CosFace comparisons |
+| `Model_compare.py` / `Model_Baseline.py` | Model definitions |
+| `Compare_losses.py` | Loss implementations |
+| `preprocess_local.py` | Landmark-based patch preparation and tensor packing |
+| `analysis_noise.py` | Noise-robustness analysis |
+| `analysis_tsne.py` | Embedding visualization |
+| `figures/` | Research figures |
 
-### 1. System Dependencies
-Install necessary system tools:
+The main training loop holds out one subject at a time and trains on the remaining subjects. See the paper for the benchmark definition and reported results. A separate desktop demonstration is not the research evaluation pipeline.
+
+## Environment
+
+The original development setup used Linux, Python 3.9, and CUDA 11.8. Dependencies are not fully version-pinned; identical results on other environments are not guaranteed.
+
 ```bash
-sudo apt-get update
-sudo apt-get install tmux unzip libgl1 -y
-```
-
-### 2. Python Environment
-
-We recommend using Conda to manage the environment:
-
-```bash
-# Create and activate environment
 conda create -n mer_env python=3.9 -y
 conda activate mer_env
-
-# Install PyTorch (CUDA 11.8 compatible)
-pip3 install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu118](https://download.pytorch.org/whl/cu118)
-
-# Install other dependencies
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 
-## 📂 Data Preparation
+## Data Preparation
 
-1. **Preprocessing**:
+Obtain datasets and permission to use them from their original providers. The code license does not grant redistribution rights to facial images, annotations, or derived dataset assets. A file's presence in this repository is not evidence of permission to redistribute it.
 
-   Run the preprocessing script to extract optical flow features. This script will automatically process the videos in `./datasets` and generate the necessary feature inputs.Bash
+The preprocessing script expects these paths relative to the repository root:
 
-   ```bash
-   python preprocess_local.py
-   ```
+```text
+combined_3_class2_for_optical_flow.csv
+datasets/
+  combined_datasets_whole/
+  STSNet_whole_norm_u_v_os/
+  three_norm_u_v_os/
+```
 
-## 🚀 Usage
-
-We recommend using `tmux` for background training on remote servers.
-
-### 1. Training (Ours: HTNet + Proxy Anchor)
-
-To train the proposed model (Signal-Geometry Aware Framework):
+`preprocess_local.py` consumes existing optical-flow images; it is not a complete raw-video-to-optical-flow extraction pipeline. It detects landmarks, assembles local patches, and writes `processed_data.pt`.
 
 ```bash
-# Start a new tmux session
-tmux new -s train_ours
+python preprocess_local.py
+```
 
-# Run training
+Check sample identifiers, subject IDs, labels, and preprocessing outputs before training. Load only trusted tensor/checkpoint files.
+
+## Training and Evaluation
+
+Run from the repository root after preparing `processed_data.pt`:
+
+```bash
+# Proposed method
 python main.py --train True --seed 1
-```
 
-### 2. Training (Baseline: Cross-Entropy)
-
-To reproduce the baseline HTNet results:
-
-```bash
+# Cross-entropy baseline
 python main_HTNet_Baseline.py --train True --seed 1
+
+# Angular-margin comparisons
+python main_Arc+Cos.py --train True --loss_type ArcFace --seed 1
+python main_Arc+Cos.py --train True --loss_type CosFace --seed 1
+
+# Evaluate the proposed method using existing subject checkpoints
+python main.py --train False --seed 1
 ```
 
-### 3. Comparison with Angular Margin Losses
+The scripts can reuse compatible existing subject checkpoints. Use a separate working copy or preserve and move checkpoints when a fresh training run is required. Do not mix methods, seeds, or preprocessing settings.
 
-To train with ArcFace or CosFace for comparison:
+The proposed method writes `Anchor_weights_<seed>/`; the baseline writes `baseline_weights_<seed>/`; margin comparisons write `weights_<loss_type>_<seed>/`. Evaluation-only mode can skip subjects with missing checkpoints; verify subject coverage before reporting aggregate scores.
 
-```bash
-# Example: Train with CosFace
-python main_Arc+Cos.py --train True --loss_type CosFace --seed 42
-```
-
-### 4. Robustness & Visualization
-
-To reproduce the analysis figures in the paper:
+## Analysis
 
 ```bash
-# Noise Robustness Analysis (Fig. 2)
-python analysis_noise.py
-
-# t-SNE Visualization (Fig. 3)
+python analysis_noise.py --seed 1
 python analysis_tsne.py
 ```
 
-## 📄 Files Description
+Before running:
 
-- **Training Scripts**:
-  - `main.py`: Main training script for the proposed method (Ours).
-  - `main_HTNet_Baseline.py`: Training script for the Baseline (CE Loss).
-  - `main_Arc+Cos.py`: Training script for SOTA angular margin losses.
-- **Models & Logic**:
-  - `Model_compare.py`: Architecture definition for HTNet with Proxy Anchor.
-  - `Model_Baseline.py`: Architecture definition for Baseline HTNet.
-  - `Compare_losses.py`: Implementation of Proxy Anchor, ArcFace, and CosFace losses.
-  - `preprocess_local.py`: Data preprocessing (Optical Flow extraction).
-- **Analysis**:
-  - `analysis_noise.py`: Script for noise robustness evaluation.
-  - `analysis_tsne.py`: Script for t-SNE visualization.
+- Align checkpoint directories with experiment outputs. The current `analysis_noise.py` uses `Aeights_<seed>` for the anchor directory; change its configuration to the intended checkpoint path.
+- Set the seed and paths in `analysis_tsne.py`; its current seed is hardcoded.
+- Verify model depth, checkpoint format, loss-head compatibility, and evaluation coverage across methods.
 
-## 📢 Acknowledgement
+This documentation cleanup does not modify training code, checkpoints, or experimental results. Full end-to-end reproduction has not been performed as part of this update.
 
-This code repository is anonymously released for double-blind peer review. Strict measures have been taken to remove author-identifying information.
+## Citation
+
+```bibtex
+@article{zeng2026signalgeometry,
+  author  = {Zeng, Qi and Xu, Rujun and Li, Cong},
+  title   = {Signal-Geometry Optimization for Micro-Expression Recognition: A Dynamic Gradient Gain Perspective},
+  journal = {IEEE Signal Processing Letters},
+  volume  = {33},
+  pages   = {2066--2070},
+  year    = {2026},
+  doi     = {10.1109/LSP.2026.3693220}
+}
+```
+
+## Acknowledgements and License
+
+This research builds on HTNet and prior micro-expression recognition and metric-learning work. Cite the relevant original methods and datasets when using or extending the implementation.
+
+See [LICENSE](LICENSE) for the repository code license. Third-party code and datasets remain subject to their respective terms.
